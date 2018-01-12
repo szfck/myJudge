@@ -1,2 +1,2 @@
-judge programm for Coda
+judge program for Coda
 =========
