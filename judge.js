@@ -164,9 +164,9 @@ if (help) {
         '[opt --output=verdict_output_path]' + 
         '[opt --help]');
 } else if (!source) {
-    console.log("Hey, you need -s {user_submission_filename}");
+    console.log("Hey, you need --source {user_submission_filename}");
 } else if (!problem_path) {
-    console.log("Hey, you need -p {problem_package_path}");
+    console.log("Hey, you need --problem {problem_package_path}");
 } else {
     if (sub) {
         problem_path = problem_path + '/' + sub;
