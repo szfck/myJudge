@@ -10,22 +10,18 @@ var problem_path = ARGS.problem;
 var output = ARGS.output;
 var time = ARGS.time;
 var sub = ARGS.subtask;
+var help = ARGS.help;
+
 
 
 
 // judge 
-//       -source       {user_submission_filename} 
-//       -problem_path {problem_package_path} 
-//       -verdict_path {verdict_path}
-// opt   -timelimit {time_limit}
-// opt   -subtask   {large/small/medium}
-/*
-console.log(source);
-console.log(problem_path);
-console.log(output);
-console.log(time);
-console.log(sub);
-*/
+//       --source       {user_submission_filename} 
+//       --problem {problem_package_path} 
+// opt   --time {time_limit}
+// opt   --subtask   {large/small/medium}
+// opt   --output {output_path}
+// opt   --help 
 function has(str, sub) {
     return str.indexOf(sub) > -1;
 }
@@ -151,13 +147,26 @@ function changeJavaClass(contents, name) {
     contents = contents.substr(0, pos) + name + contents.substr(nxt);
     return contents;
 }
-
-if (!source) {
+// judge 
+//       --source       {user_submission_filename} 
+//       --problem {problem_package_path} 
+// opt   --time {time_limit}
+// opt   --subtask   {large/small/medium}
+// opt   --output {output_path}
+// opt   --help 
+if (help) {
+    console.log(
+        'usage: judge' +
+        '[--source=user_submission_filename]' +
+        '[--problem=problem_package_path]' +
+        '[opt --subtask=subtask_name]' + 
+        '[opt --time=time_limit]' + 
+        '[opt --output=verdict_output_path]' + 
+        '[opt --help]');
+} else if (!source) {
     console.log("Hey, you need -s {user_submission_filename}");
 } else if (!problem_path) {
     console.log("Hey, you need -p {problem_package_path}");
-} else if (!output) {
-    console.log("Hey, you need -v {verdict_path}");
 } else {
     if (sub) {
         problem_path = problem_path + '/' + sub;
