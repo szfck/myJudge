@@ -3,7 +3,9 @@
   "version": "0.0.1",
   "description": "",
   "main": "judge.js",
-  "bin" : {"judge": "judge.js"},
+  "bin": {
+    "judge": "judge.js"
+  },
   "dependencies": {
     "optimist": "^0.6.1"
   },

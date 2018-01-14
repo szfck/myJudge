@@ -134,7 +134,7 @@ function toJsonResult(str, tmpSubmission) {
     
     res['totalCases'] = fileList.length;
 
-    return res;
+    return JSON.stringify(res);
 }
 
 function changeJavaClass(contents, name) {
