@@ -14,7 +14,6 @@ var help = ARGS.help;
 
 
 
-
 // judge 
 //       --source       {user_submission_filename} 
 //       --problem {problem_package_path} 
@@ -58,31 +57,53 @@ function getFiles(dir, prefix) {
     return filelist;
 }
 
-
-
-// function getCompilerErrorMsg(tmpSubmission) {
-//     var extension = path.extname(tmpSubmission);
-//     var child_process = require("child_process");
-
-//     //console.log(tmpSubmission);
-//     //console.log("extension: " + extension);
-//     if (extension == '.java') {
-//         var cmd_line = "javac " + tmpSubmission;
-//         exec(cmd_line, function(err,stdout,stderr){
-//             console.log(stderr);
-//         });
-//     } else if (extension == '.c') {
+function runCmd(cmd) {
+    var execSync = require('child_process').execSync;
+    try {
+        execSync(cmd, function(err,stdout,stderr){
+        });
+    } catch (err) {
+    }
+}
+function getCompilerErrorMsg(tmpSubmission, fileName) {
+    var extension = path.extname(tmpSubmission);
+    var err;
+    var errPath = '/usr/share/src/errorMsg';
+    //fs.writeFileSync(errPath, '');
+    if (extension == '.java') {
+        var cmd_line = "javac " + tmpSubmission + ' 2>' + errPath;
+        runCmd(cmd_line);
+        console.log(cmd_line);
+        err = fs.readFileSync(errPath).toString();
+    } else if (extension == '.c') {
+        var cmd_line = "gcc " + tmpSubmission + ' 2>' + errPath;
+        runCmd(cmd_line);
+        err = fs.readFileSync(errPath).toString();
+    } else if (extension == '.cpp') {
+        var cmd_line = "g++ " + tmpSubmission + ' 2>' + errPath;
+        runCmd(cmd_line);
+        err = fs.readFileSync(errPath).toString();
+    } else if (extension == '.py') {
+        var cmd_line = "python " + tmpSubmission + ' 2>' + errPath;
+        runCmd(cmd_line);
+        err = fs.readFileSync(errPath).toString();
+    } else {
+        err = "not find such file extension compiler";
+    }
+    //console.log(err);
+    while (true) {
+        var pos = err.indexOf(tmpSubmission);
+        if (pos > -1) {
+            err = err.substr(0, pos) + fileName + err.substr(pos + tmpSubmission.length);
+        } else {
+            break;
+        }
+    }
+    return err;
     
-//     } else if (extension == '.cpp') {
+}
 
-//     } else if (extension == '.py') {
-
-//     } else {
-//      return "not find such file extension compiler";
-//     }
-// }
-
-function toJsonResult(str, tmpSubmission) {
+function toJsonResult(str, tmpSubmission, fileName) {
     //console.log(str);
     var dataPath = problem_path + '/data';
     var fileList = getFiles(dataPath, '');
@@ -97,8 +118,8 @@ function toJsonResult(str, tmpSubmission) {
         //console.log(getCompilerErrorMsg(tmpSubmission));
         
         //var str = getCompilerErrorMsg(tmpSubmission);
-        res['compilationError'] = 'not implemented yet';
-        return res;
+        res['compilationError'] = getCompilerErrorMsg(tmpSubmission, fileName);
+        return JSON.stringify(res);
     }
     
     //others
@@ -133,7 +154,6 @@ function toJsonResult(str, tmpSubmission) {
     res['time'] = getTime(str);
     
     res['totalCases'] = fileList.length;
-
     return JSON.stringify(res);
 }
 
@@ -197,14 +217,16 @@ if (help) {
     if (time) {
         cmd_line = cmd_line + " -t " + time;
     }
-
+    //cmd_line = "ls";
     //console.log(cmd_line);
-
+    
+    //var execSync = require('child_process').execSync;
     exec(cmd_line, function(err,stdout,stderr){
-        console.log(toJsonResult(stdout, tmpSubmission));
-        // delete file
+        console.log(toJsonResult(stdout, tmpSubmission, fileName));
         fs.unlinkSync(tmpSubmission);
     });
+    
+    
 
 }
 
