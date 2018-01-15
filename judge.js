@@ -73,7 +73,7 @@ function getCompilerErrorMsg(tmpSubmission, fileName) {
     if (extension == '.java') {
         var cmd_line = "javac " + tmpSubmission + ' 2>' + errPath;
         runCmd(cmd_line);
-        console.log(cmd_line);
+        //console.log(cmd_line);
         err = fs.readFileSync(errPath).toString();
     } else if (extension == '.c') {
         var cmd_line = "gcc " + tmpSubmission + ' 2>' + errPath;
