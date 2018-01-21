@@ -113,6 +113,7 @@ function toJsonResult(str, source, fileName) {
     //Compile error
     if (has(str, "Compile error")) {
         res['verdict'] = 'CE';
+        res['failedCase'] = 1;
         res['totalCases'] = fileList.length;
         //console.log("errrrror");
         //console.log(getCompilerErrorMsg(tmpSubmission));
