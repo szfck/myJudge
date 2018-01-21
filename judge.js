@@ -7,7 +7,6 @@ exec = require('child_process').exec;
 var ARGS = optimist.argv;
 var source = ARGS.source;
 var problem_path = ARGS.problem;
-var output = ARGS.output;
 var time = ARGS.time;
 var sub = ARGS.subtask;
 var help = ARGS.help;
@@ -65,6 +64,7 @@ function runCmd(cmd) {
     } catch (err) {
     }
 }
+
 function getCompilerErrorMsg(tmpSubmission, fileName) {
     var extension = path.extname(tmpSubmission);
     var err;
@@ -103,7 +103,7 @@ function getCompilerErrorMsg(tmpSubmission, fileName) {
     
 }
 
-function toJsonResult(str, tmpSubmission, fileName) {
+function toJsonResult(str, source, fileName) {
     //console.log(str);
     var dataPath = problem_path + '/data';
     var fileList = getFiles(dataPath, '');
@@ -118,7 +118,7 @@ function toJsonResult(str, tmpSubmission, fileName) {
         //console.log(getCompilerErrorMsg(tmpSubmission));
         
         //var str = getCompilerErrorMsg(tmpSubmission);
-        res['compilationError'] = getCompilerErrorMsg(tmpSubmission, fileName);
+        res['compilationError'] = getCompilerErrorMsg(source, fileName);
         return JSON.stringify(res);
     }
     
@@ -143,7 +143,7 @@ function toJsonResult(str, tmpSubmission, fileName) {
         var tmpStr = str.substr(pos);
         pos = tmpStr.indexOf(',');
         var caseName = tmpStr.substr(0, pos);
-        //console.log(caseName);
+        // console.log(caseName);
         var idx = fileList.indexOf(caseName);
 
         res['failedCase'] = {};
@@ -157,16 +157,16 @@ function toJsonResult(str, tmpSubmission, fileName) {
     return JSON.stringify(res);
 }
 
-function changeJavaClass(contents, name) {
-    //console.log(contents);
-    contents = ''+contents.replace(/ +(?= )/g,'')
+// function changeJavaClass(contents, name) {
+//     //console.log(contents);
+//     contents = ''+contents.replace(/ +(?= )/g,'')
 
-    var pos = contents.indexOf('public class ');
-    pos += 'public class '.length;
-    var nxt = contents.indexOf('{', pos);
-    contents = contents.substr(0, pos) + name + contents.substr(nxt);
-    return contents;
-}
+//     var pos = contents.indexOf('public class ');
+//     pos += 'public class '.length;
+//     var nxt = contents.indexOf('{', pos);
+//     contents = contents.substr(0, pos) + name + contents.substr(nxt);
+//     return contents;
+// }
 // judge 
 //       --source       {user_submission_filename} 
 //       --problem {problem_package_path} 
@@ -180,8 +180,7 @@ if (help) {
         '[--source=user_submission_filename]' +
         '[--problem=problem_package_path]' +
         '[opt --subtask=subtask_name]' + 
-        '[opt --time=time_limit]' + 
-        '[opt --output=verdict_output_path]' + 
+        '[opt --time=time_limit]' +
         '[opt --help]');
 } else if (!source) {
     console.log("Hey, you need --source {user_submission_filename}");
@@ -193,25 +192,23 @@ if (help) {
     }
 
     var pos = source.lastIndexOf("/");
-    var userPath = source.substr(0, pos);
+    // var userPath = source.substr(0, pos);
     var fileName = source.substr(pos + 1);
-
     
+    // var testName = fileName;
     
-    var testName = "TTMMPPTest";
+    // var tmpFileName = testName + path.extname(fileName);
+    // var tmpSubmission = problem_path + '/submissions/accepted/' + tmpFileName; 
+
+    // var contents = fs.readFileSync(source).toString();
     
-    var tmpFileName = testName + path.extname(fileName);
-    var tmpSubmission = problem_path + '/submissions/accepted/' + tmpFileName; 
+    // if (path.extname(fileName) == '.java') {
+    //     contents = changeJavaClass(contents, fileName);
+    // }
 
-    var contents = fs.readFileSync(source).toString();
-    
-    if (path.extname(fileName) == '.java') {
-        contents = changeJavaClass(contents, testName);
-    }
+    // fs.writeFileSync(tmpSubmission, contents);
 
-    fs.writeFileSync(tmpSubmission, contents);
-
-    var cmd_line = "verifyproblem " + problem_path + " -s " + "accepted/" + tmpFileName + " -p submissions";
+    var cmd_line = "verifyproblem " + problem_path + " -s " + "accepted/" + fileName + " -p submissions";
     
     //console.log(cmd_line);
     if (time) {
@@ -222,8 +219,8 @@ if (help) {
     
     //var execSync = require('child_process').execSync;
     exec(cmd_line, function(err,stdout,stderr){
-        console.log(toJsonResult(stdout, tmpSubmission, fileName));
-        fs.unlinkSync(tmpSubmission);
+        console.log(toJsonResult(stdout, source, fileName));
+        // fs.unlinkSync(tmpSubmission);
     });
     
     
