@@ -68,7 +68,7 @@ function runCmd(cmd) {
 function getCompilerErrorMsg(tmpSubmission, fileName) {
     var extension = path.extname(tmpSubmission);
     var err;
-    var errPath = '/usr/share/src/errorMsg';
+    var errPath = '/usr/share/errorMsg';
     //fs.writeFileSync(errPath, '');
     if (extension == '.java') {
         var cmd_line = "javac " + tmpSubmission + ' 2>' + errPath;
