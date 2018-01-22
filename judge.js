@@ -1,237 +1,164 @@
 #!/usr/bin/nodejs
-optimist = require('optimist');
-path = require('path')
-fs = require('fs');
-exec = require('child_process').exec;
+/**
+ * @fileoverview
+ *
+ * Usage:
+ *
+ * node judge.js
+ *   --source {user_submission_filename}
+ *   --problem {problem_package_path}
+ *   opt   --time {time_limit}
+ *   opt   --subtask {large/small/medium}
+ *   opt   --output {output_path}
+ *   opt   --help
+ */
 
-var ARGS = optimist.argv;
-var source = ARGS.source;
-var problem_path = ARGS.problem;
-var time = ARGS.time;
-var sub = ARGS.subtask;
-var help = ARGS.help;
+"use strict";
+const path = require('path');
+const fs = require('fs');
+const child_process = require('child_process');
+const exec = child_process.exec;
+const execSync = child_process.execSync;
 
+const ARGS = require('optimist').argv;
+const problemPath = ARGS.problem;
+const source = ARGS.source;
+const time = ARGS.time;
+const sub = ARGS.subtask;
+const help = ARGS.help;
 
-
-// judge 
-//       --source       {user_submission_filename} 
-//       --problem {problem_package_path} 
-// opt   --time {time_limit}
-// opt   --subtask   {large/small/medium}
-// opt   --output {output_path}
-// opt   --help 
-function has(str, sub) {
-    return str.indexOf(sub) > -1;
+function hsaSubstring(str, sub) {
+  return str.indexOf(sub) > -1;
 }
 
-function isDigit(ch) {
-    return ch >= '0' && ch <= '9' || ch == '.';
-}
-
+/**
+ * @returns Execution time (CPU time) from verifyproblem output "CPU:..."
+ */
 function getTime(str) {
-    var pos = str.indexOf('CPU:');
-    while (!isDigit(str[pos])) pos++;
-    var last = pos;
-    while (isDigit(str[last])) last++;
-    return str.substr(pos, last - pos);
+  return str.match(/CPU:[^0-9.]*([0-9.]+)/)[1];
 }
 
 function getFiles(dir, prefix) {
-    var files = fs.readdirSync(dir);
-    filelist = [];
-    files.forEach(function(file) {
-        if (fs.statSync(dir + '/' + file).isDirectory()) {
-            var prefixName;
-            if (prefix == '') prefixName = file;
-            else prefixName = prefix + '/' + file;
-            filelist = filelist.concat(getFiles(dir + '/' + file, prefixName));
-        }
-        else {
-            if (path.extname(file) == ".in") {
-                filelist.push(prefix + '/' + file.replace(/\.[^/.]+$/, ""));
-            }
-            
-        }
-    });
-    return filelist;
+  var files = fs.readdirSync(dir);
+  var filelist = [];
+  files.forEach(function(file) {
+    if (fs.statSync(dir + '/' + file).isDirectory()) {
+      const prefixName = prefix === '' ? file : prefix + '/' + file;
+      filelist = filelist.concat(getFiles(dir + '/' + file, prefixName));
+    } else {
+      if (path.extname(file) === '.in') {
+        filelist.push(prefix + '/' + file.replace(/\.[^/.]+$/, ''));
+      }
+    }
+  });
+  return filelist;
 }
 
 function runCmd(cmd) {
-    var execSync = require('child_process').execSync;
-    try {
-        execSync(cmd, function(err,stdout,stderr){
-        });
-    } catch (err) {
-    }
+  try {
+    execSync(cmd);
+  } catch (err) {
+    console.error('execSync error:', err);
+  }
 }
 
-function getCompilerErrorMsg(tmpSubmission, fileName) {
-    var extension = path.extname(tmpSubmission);
-    var err;
-    var errPath = '/usr/share/errorMsg';
-    //fs.writeFileSync(errPath, '');
-    if (extension == '.java') {
-        var cmd_line = "javac " + tmpSubmission + ' 2>' + errPath;
-        runCmd(cmd_line);
-        //console.log(cmd_line);
-        err = fs.readFileSync(errPath).toString();
-    } else if (extension == '.c') {
-        var cmd_line = "gcc " + tmpSubmission + ' 2>' + errPath;
-        runCmd(cmd_line);
-        err = fs.readFileSync(errPath).toString();
-    } else if (extension == '.cpp') {
-        var cmd_line = "g++ " + tmpSubmission + ' 2>' + errPath;
-        runCmd(cmd_line);
-        err = fs.readFileSync(errPath).toString();
-    } else if (extension == '.py') {
-        var cmd_line = "python " + tmpSubmission + ' 2>' + errPath;
-        runCmd(cmd_line);
-        err = fs.readFileSync(errPath).toString();
-    } else {
-        err = "not find such file extension compiler";
-    }
-    //console.log(err);
-    // while (true) {
-    //     var pos = err.indexOf(tmpSubmission);
-    //     if (pos > -1) {
-    //         err = err.substr(0, pos) + fileName + err.substr(pos + tmpSubmission.length);
-    //     } else {
-    //         break;
-    //     }
-    // }
-    return err;
-    
+function getCompilerErrorMsg(tmpSubmission) {
+  var extension = path.extname(tmpSubmission);
+  var errPath = '/usr/share/errorMsg';
+  var cmdLine;
+  switch (extension) {
+    case '.java':
+      cmdLine = 'javac ' + tmpSubmission + ' 2>' + errPath;
+      break;
+    case '.c':
+      cmdLine = 'gcc ' + tmpSubmission + ' 2>' + errPath;
+      break;
+    case '.cpp':
+      cmdLine = 'g++ ' + tmpSubmission + ' 2>' + errPath;
+      break;
+    case '.py':
+      cmdLine = 'python ' + tmpSubmission + ' 2>' + errPath;
+      break;
+    default:
+      return 'file extension not supported by any compiler';
+  }
+  runCmd(cmdLine);
+  return fs.readFileSync(errPath).toString();
 }
 
 function toJsonResult(str, source, fileName) {
-    //console.log(str);
-    var dataPath = problem_path + '/data';
-    var fileList = getFiles(dataPath, '');
+  var dataPath = problemPath + '/data';
+  var fileList = getFiles(dataPath, '');
 
-    res = {};
+  // Compile error
+  if (hsaSubstring(str, 'Compile error')) {
+    return JSON.stringify({
+      verdict: 'CE',
+      failedCase: {
+        number: 1,
+        name: 'unknown'
+      },
+      totalCases: fileList.length,
+      compilationError: getCompilerErrorMsg(source, fileName)
+    });
+  }
 
-    //Compile error
-    if (has(str, "Compile error")) {
-        res['verdict'] = 'CE';
-        res['failedCase'] = {};
-        res['failedCase']['number'] = 1;
-        res['failedCase']['name'] = 'unknown';
-        res['totalCases'] = fileList.length;
-        //console.log("errrrror");
-        //console.log(getCompilerErrorMsg(tmpSubmission));
-        
-        //var str = getCompilerErrorMsg(tmpSubmission);
-        res['compilationError'] = getCompilerErrorMsg(source, fileName);
-        return JSON.stringify(res);
-    }
-    
-    //others
-    var pos = str.indexOf('[');
-    var nxt = str.indexOf(']');
-    pos -= 5;
-    str = str.substr(pos, nxt - pos + 1);
-    //console.log(str);
-    
-    if (has(str, "AC")) {
-      res['verdict'] = 'AC';
-      res['failedCase'] = {};
-      res['failedCase']['number'] = 0;
-      res['failedCase']['name'] = 'unknown';
-    }
-    else if (has(str, "TLE")) res['verdict'] = 'TLE';
-    else if (has(str, "RTE")) res['verdict'] = 'RE';
-    else {
-        res['verdict'] = 'WA';
-    }
-    
-    var verdict = res['verdict'];
-    
-    if (verdict == 'RE' || verdict == 'WA' || verdict == 'TLE') {
-        var pos = str.indexOf('test case ') + 10;
-        var tmpStr = str.substr(pos);
-        pos = tmpStr.indexOf(',');
-        var caseName = tmpStr.substr(0, pos);
-        // console.log(caseName);
-        var idx = fileList.indexOf(caseName);
+  var pos = str.indexOf('[');
+  var nxt = str.indexOf(']');
+  pos -= 5; // 5 = max length of (AC, TLE, RE...) + a safty margin
+  str = str.substr(pos, nxt - pos + 1);
 
-        res['failedCase'] = {};
-        res['failedCase']['number'] = idx + 1;
-        res['failedCase']['name'] = caseName;
-    }
+  var res = {
+    verdict: ['AC', 'TLE', 'RTE', 'WA']
+      .filter(function(verdict) {
+        return hsaSubstring(str, verdict);
+      })[0],
+    failedCase: {
+      number: 0,
+      name: ''
+    },
+    time: getTime(str),
+    totalCases: fileList.length
+  };
 
-    res['time'] = getTime(str);
-    
-    res['totalCases'] = fileList.length;
-    return JSON.stringify(res);
+  if (!res.verdict) {
+    console.error('verdict not found');
+  }
+
+  if (res.verdict !== 'AC') {
+    var pos = str.indexOf('test case ') + 10;
+    const tmpStr = str.substr(pos);
+    pos = tmpStr.indexOf(',');
+    var caseName = tmpStr.substr(0, pos);
+    res.failedCase = {
+      number: fileList.indexOf(caseName) + 1,
+      name: caseName
+    };
+  }
+  return JSON.stringify(res);
 }
 
-// function changeJavaClass(contents, name) {
-//     //console.log(contents);
-//     contents = ''+contents.replace(/ +(?= )/g,'')
-
-//     var pos = contents.indexOf('public class ');
-//     pos += 'public class '.length;
-//     var nxt = contents.indexOf('{', pos);
-//     contents = contents.substr(0, pos) + name + contents.substr(nxt);
-//     return contents;
-// }
-// judge 
-//       --source       {user_submission_filename} 
-//       --problem {problem_package_path} 
-// opt   --time {time_limit}
-// opt   --subtask   {large/small/medium}
-// opt   --output {output_path}
-// opt   --help 
 if (help) {
-    console.log(
-        'usage: judge' +
-        '[--source=user_submission_filename]' +
-        '[--problem=problem_package_path]' +
-        '[opt --subtask=subtask_name]' + 
-        '[opt --time=time_limit]' +
-        '[opt --help]');
+  console.log(
+    'usage: judge' +
+    '  [--source=user_submission_filename]' +
+    '  [--problem=problem_package_path]' +
+    '  [opt --subtask=subtask_name]' +
+    '  [opt --time=time_limit]' +
+    '  [opt --help]'
+  );
 } else if (!source) {
-    console.log("Hey, you need --source {user_submission_filename}");
-} else if (!problem_path) {
-    console.log("Hey, you need --problem {problem_package_path}");
+  console.log('--source {user_submission_filename} is required');
+} else if (!problemPath) {
+  console.log('--problem {problem_package_path} is required');
 } else {
-    if (sub) {
-        problem_path = problem_path + '/' + sub;
-    }
-
-    var pos = source.lastIndexOf("/");
-    // var userPath = source.substr(0, pos);
-    var fileName = source.substr(pos + 1);
-    
-    // var testName = fileName;
-    
-    // var tmpFileName = testName + path.extname(fileName);
-    // var tmpSubmission = problem_path + '/submissions/accepted/' + tmpFileName; 
-
-    // var contents = fs.readFileSync(source).toString();
-    
-    // if (path.extname(fileName) == '.java') {
-    //     contents = changeJavaClass(contents, fileName);
-    // }
-
-    // fs.writeFileSync(tmpSubmission, contents);
-
-    var cmd_line = "verifyproblem " + problem_path + " -s " + "accepted/" + fileName + " -p submissions";
-    
-    //console.log(cmd_line);
-    if (time) {
-        cmd_line = cmd_line + " -t " + time;
-    }
-    //cmd_line = "ls";
-    //console.log(cmd_line);
-    
-    //var execSync = require('child_process').execSync;
-    exec(cmd_line, function(err,stdout,stderr){
-        console.log(toJsonResult(stdout, source, fileName));
-        // fs.unlinkSync(tmpSubmission);
-    });
-    
-    
-
+  const judgeProblemPath = sub ? problemPath + '/' + sub : problemPath;
+  const pos = source.lastIndexOf('/');
+  const fileName = source.substr(pos + 1);
+  const cmdLine = 'verifyproblem ' + judgeProblemPath + ' -s ' + 'accepted/' + fileName + ' -p submissions' +
+    (time ? ' -t ' + time : '');
+  exec(cmdLine, function(err, stdout, stderr) {
+    console.log(toJsonResult(stdout, source, fileName));
+  });
 }
 
