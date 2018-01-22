@@ -132,6 +132,7 @@ function toJsonResult(str, source, fileName) {
     
     if (has(str, "AC")) {
       res['verdict'] = 'AC';
+      res['failedCase'] = {};
       res['failedCase']['number'] = 0;
     }
     else if (has(str, "TLE")) res['verdict'] = 'TLE';
