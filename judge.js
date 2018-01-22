@@ -91,14 +91,14 @@ function getCompilerErrorMsg(tmpSubmission, fileName) {
         err = "not find such file extension compiler";
     }
     //console.log(err);
-    while (true) {
-        var pos = err.indexOf(tmpSubmission);
-        if (pos > -1) {
-            err = err.substr(0, pos) + fileName + err.substr(pos + tmpSubmission.length);
-        } else {
-            break;
-        }
-    }
+    // while (true) {
+    //     var pos = err.indexOf(tmpSubmission);
+    //     if (pos > -1) {
+    //         err = err.substr(0, pos) + fileName + err.substr(pos + tmpSubmission.length);
+    //     } else {
+    //         break;
+    //     }
+    // }
     return err;
     
 }
