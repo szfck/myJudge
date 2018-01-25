@@ -123,6 +123,10 @@ function toJsonResult(str, source, fileName) {
     totalCases: fileList.length
   };
 
+  if (res.verdict === 'RTE') {
+    res.verdict = 'RE';
+  }
+
   if (!res.verdict) {
     console.error('verdict not found');
   }
